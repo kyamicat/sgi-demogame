@@ -1,0 +1,153 @@
+/*
+
+	Init logic. The file gets called at bootup, and restart.
+	
+*/
+
+if (global(firstrun) == True) {
+	
+	if (previous_location == "0") {
+		// Previous room equalling string "0" means it's first bootup.
+	
+		/*
+		initgraph (gd, gm);
+		
+		gd  =	+---+-----------------------------------+----+
+				|gd | adapter                           | cd |
+				+===+===================================+====+
+				| 0 | IBM Monochrome Display Adapter    |  2 | 
+				| 1 | IBM Color Graphics Adapter (BGRY) |  4 |
+				| 2 | IBM Color Graphics Adapter (BCMW) |  4 |
+				| 3 | IBM Enhanced Graphics Adapter     | 16 |
+				| 4 | MOS Technology VIC-II             | 16 |
+				| 5 | Apple II                          | 16 |
+				| 6 | Tandy 1000                        | 16 |
+				| 7 | Amstrad 1512                      | 16 |
+				+---+-----------------------------------+----+
+
+		gm	=	+----+------------+-----+-----------+
+				| gm | Resolution | PxW | Play Area |
+				+====+============+=====+===========+
+				|  0 |	320x200   |   2 |   160x168 |
+				|  1 |	320x200   |   1 |   320x168 |
+				|  2 |	384x216   |   2 |   192x184 |
+				|  3 |	384x216   |   1 |   384x184 |
+				+----+------------+-----+-----------+
+
+		*/
+		
+		// Initialise Graphics
+		initgraph (3, 2);
+		window.magnification = 2;
+	}
+
+	/*
+		Now we get onto common initialisation. Things we want to be set_new_handler
+		regardless if it's a first boot, or a game restart...
+	*/
+
+	// Set the engine's language
+	setlang("en");
+
+	// Set the game window caption.
+	window.caption ("Demo Game Template");
+	
+	// Set Unique Game Serial (Saves and loads will carry this key)
+	game.serialize ("Demo Game Template");
+	
+	// Set the game save file location. ~ = user's home directory.
+	game.savefile ("~/.demogametemplate");
+
+	// Set the maximum score
+	global(max_score) = 10;
+
+	// You need to create menus on start, and restart.
+	include ("create menus");
+	
+	scene.background ("title card.png");
+	sprite.add ("new game", "title-newgame");
+	sprite.position("new game") = (35,121);
+	sprite.animate("new game") = False;
+	sprite.visible("new game") = True;
+	sprite.frame("new game") = 1;
+	sprite.add ("restore game", "title-restore");
+	sprite.position("restore game") = (65,146);
+	sprite.animate("restore game") = False;
+	sprite.visible("restore game") = True;
+	sprite.add ("quit game", "title-quit");
+	sprite.position("quit game") = (95,171);
+	sprite.animate("quit game") = False;
+	sprite.visible("quit game") = True;
+	
+	inventory.text("matchbook") = "A book of matches.";
+	
+}	
+
+if (previous_location != "0") {
+	// The game was restarted, skip any further code and go straight into the game.
+	game.scene ("apartment living room");
+}
+	
+if (kbhit) {
+	if (keypressed == "alt-return") {
+		window.fullscreen();	// Toggles fullscreen mode.
+	}
+	if (keypressed == "kp_plus") {
+		if (window.fullscreen == False) {
+			if (window.magnification < 5) {
+				// Only executes if the game is windowed, and the magnification is smaller than 5.
+				window.magnification = window.magnification+1;
+			}
+		}
+	}
+	if (keypressed == "kp_minus") {
+		if (window.fullscreen == False) {
+			if (window.magnification > 1) {
+				// Only executes if the game is windowed, and the magnification is larger than 1.
+				window.magnification = window.magnification-1;
+			}
+		}
+	}
+	if (keypressed == "up") {
+		if (sprite.frame("new game") == 1) {
+			sprite.frame("quit game") = 1;
+			sprite.frame("new game") = 0;
+		} else {
+			if (sprite.frame("quit game") == 1) {
+				sprite.frame("quit game") = 0;
+				sprite.frame("restore game") = 1;
+			} else {
+				sprite.frame("restore game") = 0;
+				sprite.frame("new game") = 1;
+			}
+		}
+	}
+	if (keypressed == "down") {
+		if (sprite.frame("new game") == 1) {
+			sprite.frame("restore game") = 1;
+			sprite.frame("new game") = 0;
+		} else {
+			if (sprite.frame("quit game") == 1) {
+				sprite.frame("quit game") = 0;
+				sprite.frame("new game") = 1;
+			} else {
+				sprite.frame("restore game") = 0;
+				sprite.frame("quit game") = 1;
+			}
+		}
+	}
+	if (((keypressed == "return") or (keypressed == "space")) or (keypressed == "kp_enter")) {
+		if (sprite.frame("new game") == 1) {
+			game.scene ("apartment living room");
+		} else {
+			if (sprite.frame("restore game") == 1) {
+				game.load();
+			} else {
+				game.halt();
+			}
+		}
+	}
+	if (keypressed == "escape") {
+		game.stop();
+	}
+}

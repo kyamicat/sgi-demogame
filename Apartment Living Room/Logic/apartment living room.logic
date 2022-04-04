@@ -1,0 +1,533 @@
+/*
+
+	Apartment Living Room Logic.
+	
+*/
+
+if (global(firstrun) == True) {
+	/*
+	
+		Placing code inside an "if (global(firstrun))" code block
+		is equivalent of initialising a room. The flag, "firstrun"
+		is only True the first time the game engine runs this
+		script, or, if you force the setting to True.
+	
+	*/
+
+	
+	// Show the menu bar
+	global(menubar) = True;
+
+	// Allow the player to input text
+	global(inputarea) = True;
+	
+	// Check if global flags exist, and if not, create their default state.
+	if (exists(global(apartment_hotplate_lit)) == False) {
+		global(apartment_hotplate_lit) = False;
+	}
+	if (exists(global(apartment_kitchen_drawer_open)) == False) {
+		global(apartment_kitchen_drawer_open) = False;
+	}
+	if (exists(global(got_point_for_hotplate_ignition)) == False) {
+		global(got_point_for_hotplate_ignition) = False;
+	}
+
+	// Set a background canvas (Otherwise nothing displays)
+	scene.background ("apartment living room.png");
+
+	// Add some objects
+	
+	/*
+		First we add the kitchen counter. It's a one frame sprite.
+		The purpose is so the player can "walk behind" the kitchen
+		counter, as the played will always walk atop the background
+		image.
+	*/
+	sprite.add ("kitchen", "apartment living room kitchenette");
+	sprite.position("kitchen") = (22, 146);
+	sprite.visible("kitchen") = True;
+
+	/*
+		As with the kitchen counter, we place the living room
+		counter and couch as a one frame sprite, allowing the
+		player to walk in front of and behind it.
+	*/
+	sprite.add ("planter", "apartment living room planter");
+	sprite.position("planter") = (98, 129);
+	sprite.visible("planter") = True;
+
+	/*
+		The TV can be switched on and off. For this example, the
+		TV will be initialised as switched off (invisible), and
+		the background art provides us with a unpowered TV, since
+		we can't walk behind it.
+		
+		When the player switches the TV on, we simply change the
+		TV visibility setting to True.
+	*/
+	sprite.add ("tv", "tv");
+	sprite.position("tv") = (128, 83);
+	sprite.visible("tv") = False;
+	tv_is_on = False;	// A local variable indicating if the TV is on.
+
+	/*
+		Next we add the flame for the hotplate. We set the visibility
+		by the global(apartment_hotplate_lit) flag, this way when
+		we leave this room, and come back, the flame will still be
+		lit (or not) depending on what that flag is set to.
+	*/
+	sprite.add ("hotplate", "hotplate");
+	sprite.position("hotplate") = (27, 122);
+	sprite.visible("hotplate") = global(apartment_hotplate_lit);
+
+	/*
+		Now we add the player sprite. This is the sprite we'll
+		move around screen, in front of and behind other sprites.
+		A sprite will always sit atop the room's background art.
+	*/
+	sprite.add ("player","ego");
+	sprite.position("player") = (75,110);
+	sprite.view("player") = 2;
+	sprite.visible("player") = True;
+	sprite.walkable_area("player") = "apartment living room walkable area.png";
+	sprite.mask("player", "in kitchen") = "apartment living room kitchen mask.png";
+	sprite.mask("player", "near stove") = "apartment living room stove mask.png";
+	player_direction = "stopped";
+	player_standing = True;
+
+	/*
+		Now we'll create some synonyms.
+		
+		Synonyms help us to make better matches in the parser. They can be
+		particularly useful for cultural localisation.
+		
+		For example, a car "trunk" in the USA, is called a car "boot" in Australia.
+		You could also apply synonym logic to deal with UK and US English differences, 
+		such as "tire" and "tyre".
+		
+		Just remember the target words you set, and use those in your said() expressions.
+	*/
+	word.syn.add ("switch", "turn");
+	word.syn.add ("bulb", "lamp");
+	word.syn.add ("television", "tv");
+	word.syn.add ("screen", "tv");
+	word.syn.add ("monitor", "tv");
+	word.syn.add ("range", "hotplate");
+	word.syn.add ("cooker", "hotplate");
+	word.syn.add ("hob", "hotplate");
+	word.syn.add ("cooktop", "hotplate");
+	word.syn.add ("stove", "hotplate");
+	word.syn.add ("stovetop", "hotplate");
+	word.syn.add ("burner", "hotplate");
+	word.syn.add ("kitchenette", "kitchen");
+	word.syn.add ("buildings", "city");
+	word.syn.add ("skyline", "city");
+	word.syn.add ("outside", "city");
+	word.syn.add ("painting", "picture");
+	word.syn.add ("art", "picture");
+	word.syn.add ("artwork", "picture");
+	word.syn.add ("photo", "picture");
+	word.syn.add ("matches", "matchbook");
+	word.syn.add ("match", "matchbook");
+	word.syn.add ("pickup", "get");
+	word.syn.add ("take", "get");
+	
+	/*
+		You can also set words to completely ignore. Joining words area
+		good to add, such as "in", "with", and "at".
+		
+		For example, adding "at" will enable input, "look at picture" to be
+		matched using the code: said("look picture")
+	*/
+	word.ignore.add ("the");
+	word.ignore.add ("fire");  // Just in case someone tries, "on fire".
+}	
+
+
+/*
+	Conditional baseline changing.
+*/
+
+if (sprite.collide.mask ("player", "in kitchen")) {
+	// If the player is inside the kitchen mask, we always want the kitchen on top of the player.
+	sprite.baseline("kitchen") = 0;
+} else {
+	// Otherwise, we only want the kitchen atop the player sprite when we're 25 above it's Y position.
+	sprite.baseline("kitchen") = -25;
+}
+
+/*
+
+	Now a little fun with timers...
+
+*/
+
+if (timer.exists ("burning timer")) {		// This can only happen when the hotplate is burning.
+	if (timer.elapsed ("burning timer") > 10000) {
+		random_response = random.int (0, 2);
+		if (random_response == 0) {	print ("''Gee, it sure is getting warm in here.''"); }
+		if (random_response == 1) {	print ("You think to yourself, ''I wonder how much gas costs?''"); }
+		if (random_response == 2) {	print ("''I'm sweaty.''"); }
+		timer.restart ("burning timer");	// Start timer again so we don't get stuck in instant message loop.
+	}
+}
+
+/*
+
+	Input handling...
+	
+*/
+
+if (input) {
+
+	if (said("quit||exit", hint=False)) {
+		game.stop();
+	}
+	if (said("look")) {
+		print ("You're in your apartment. There is a kitchenette to the west, and a lounge with a lovely garden planter facing the television to the east. There is a painting hung on the western wall.");
+	}
+	if (said("look kitchen")) {
+		if (sprite.collide.mask ("player", "in kitchen")) {
+			desc = "The kitchenette has a single working drawer, and a gas fired hotplate.";
+			if (global(apartment_kitchen_drawer_open)) {
+				desc = desc+" Some fool has left the drawer open.";
+			}
+			print (desc);
+		} else {
+			print ("''I can't see it from here.''");
+		}
+	}
+	if (said("look drawer")) {
+		if (sprite.collide.mask ("player", "near stove")) {
+			if (global(apartment_kitchen_drawer_open)) {
+				if (inventory.count("matchbook") > 0) {
+					print ("The kitchen drawer is empty.");
+				} else {
+					print ("There is a matchbook in the drawer.");
+				}
+			} else {
+				print ("The kitchen drawer is closed.");
+			}
+		} else {
+			print ("''I can't see it from here.''");
+		}
+	}
+	if (said("strike matchbook||light matchbook||ignite matchbook")) {
+		if (inventory.count("matchbook") > 0) {
+			print ("Just use a match on whatever you'd like to ignite.");
+		} else {
+			print ("You don't have any matches.");
+		}
+	}
+	if (said("turn on hotplate||turn hotplate on||light hotplate||ignite hotplate||start hotplate||use matchbook hotplate")) {
+		if (sprite.collide.mask ("player", "near stove")) {
+			if (inventory.count("matchbook") > 0) {
+				print ("You light the hotplate.");
+				timer.start ("burning timer");
+				if (global(got_point_for_hotplate_ignition) == False) {
+					global(score) += 1;
+					global(got_point_for_hotplate_ignition) = True;
+				}
+				global(apartment_hotplate_lit) = True;
+				sprite.animate("hotplate") = True;
+				sprite.visible("hotplate") = True;
+			} else {
+				print ("''I have nothing to light it with.''");
+			}
+		} else {
+			print ("You're not close enough.");
+		}
+	}
+	if (said("turn hotplate off||turn off hotplate||extinguish hotplate")) {
+		if (sprite.collide.mask ("player", "near stove")) {
+			if (global(apartment_hotplate_lit)) {
+				global(apartment_hotplate_lit) = False;
+				sprite.visible("hotplate") = False;
+				print ("You extinguish the flames.");
+				timer.del ("burning timer");
+			} else {
+				print ("It's already off.");
+			}
+		} else {
+			print ("You're not close enough.");
+		}
+	}
+	if (said("use matchbook||light matchbook||strike matchbook")) {
+		if (inventory.count("matchbook") > 0) {
+			print ("''What do I use it on?''");
+		} else {
+			print ("I don't have any matches.");
+		}
+	}
+	if (said("open drawer||pull drawer||open cupboard")) {
+		if (sprite.collide.mask ("player", "near stove")) {
+			if (global(apartment_kitchen_drawer_open)) {
+				print ("The drawer is already open.");
+			} else {
+				print ("You open the kitchen drawer.");
+				global(apartment_kitchen_drawer_open) = True;
+			}
+		} else {
+			print ("You're not close enough.");
+		}
+	}
+	if (said("close drawer||push drawer||close cupboard")) {
+		if (sprite.collide.mask ("player", "near stove")) {
+			if (global(apartment_kitchen_drawer_open)) {
+				print ("You close the kitchen drawer.");
+				global(apartment_kitchen_drawer_open) = False;
+			} else {
+				print ("The drawer is already closed.");
+			}
+		} else {
+			print ("You're not close enough.");
+		}
+	}
+	if (said("get matchbook||pick up matchbook")) {
+		if ((sprite.collide.mask ("player", "near stove")) and (global(apartment_kitchen_drawer_open))) {
+			if (inventory.count("matchbook") == 0) {
+				inventory.add("matchbook");
+				print ("You pick the matchbook out of the drawer.");
+			} else {
+				print ("You already have a matchbook.");
+			}
+		} else {
+			print ("There is no matchbook around here.");
+		}
+	}
+	if (said("use hotplate")) {
+		if (sprite.collide.mask ("player", "near stove")) {
+			if (global(apartment_hotplate_lit) == False) {
+				print ("''I can't use it until I light it.''");
+			} else {
+				print ("You warm your hands against the warm flame, since there is no food to cook.");
+			}
+		} else {
+			print ("You're not close enough.");
+		}
+	}
+	if (said("look hotplate||look hot plate")) {
+		if (global(apartment_hotplate_lit)) {
+			print ("The hot plate is burning gas.");
+		} else {
+			print ("The hot plate is off.");
+		}
+	}
+	if (said("look picture||look picture frame||look frame")) {
+		print ("It's a painting of Hohenschwangau Castle in Bavaria, overlooking the Alps.");
+	}
+	if (said("get picture")) {
+		print ("You don't have a need to take it anywhere.");
+	}
+	if (said("use matchbook picture||light picture||ignite picture")) {
+		if (inventory.count("matchbook") > 0) {
+			// We have matches in our inventory, so... let's just not allow that...
+			print ("Oh the painting isn't that bad!");
+		} else {
+			print ("You don't have any matches.");
+		}
+	}
+	if (said("look tv")) {
+		print ("It's a Sonny Triathlon 60'' television. You got it for a bargain in the east village one day, and hauled it home on the subway.");
+	}
+	if (said("look window||look windows||look city")) {
+		print ("Looking out the windows, you notice the city is engulfed in it's typical purple haze. Perhaps if people would stop vaping blueberries, the sky would be blue like a normal city.");
+	}
+	if (said("use tv||turn tv on||turn on tv||watch tv")) {
+		if (tv_is_on) {
+			print ("The TV is on already. Look at that idiot waving his arms.");
+		} else {
+			if (player_standing) {
+				print ("I prefer to watch my television seated.");
+			} else {
+				print ("You switch the television on.");
+				sprite.visible("tv") = True;
+				sprite.animate("tv") = True;
+				tv_is_on = True;
+			}
+		}
+	}
+	if (said("turn tv off||turn off tv")) {
+		if (tv_is_on) {
+			sprite.visible("tv") = False;
+			sprite.animate("tv") = False;
+			tv_is_on = False;
+			print ("Thank goodness for that!");
+		} else {
+			print ("The TV isn't on.");
+		}
+	}
+	if (said("stand||get up")) {
+		if (player_standing == False) {
+			sprite.y("player") = sprite.y("player")-3;
+			sprite.view("player") = 2;
+			player_standing = True;
+		} else {
+			print ("I'm already standing.");
+		}
+	}
+	if (said("sit||sit down")) {
+		if (player_standing == False) {
+			print ("I'm already sitting.");
+		} else {
+			if (sprite.collide.rect("player", (102,109,112,117))) {
+				// Player is closest to the left seat.
+				sprite.position("player") = (107,118);
+				sprite.view("player") = 0;
+				player_direction = "stopped";
+				player_standing = False;
+			} else {
+				if (sprite.collide.rect("player", (112,109,126,117))) {
+					// Player is closest to the centre seat.
+					sprite.position("player") = (116,118);
+					sprite.view("player") = 3;
+					player_direction = "stopped";
+					player_standing = False;
+				} else {
+					if (sprite.collide.rect("player", (126,109,142,117))) {
+						// Player is closest to the right seat.
+						sprite.position("player") = (130,118);
+						sprite.view("player") = 3;
+						player_direction = "stopped";
+						player_standing = False;
+					} else {
+						// Player isn't near a seat.
+						print ("I'd much rather sit on a lounge than the floor.");
+					}
+				}
+			}
+		}
+	}
+	if (said("look lamp||look light")) {
+		print ("It's a freestanding lamp. It comes in handy at night, since the apartment owner never bothered installing lights.");
+	}
+	if (input) {
+		/*
+			input returns false if a previously executed said()
+			statement is successfully matched. So, in this instance
+			we can assume no previous said() statements returned True.
+			
+			Therefore, we return a generic do not understand message...
+		*/
+		rand = random.int(0,5);
+		if (rand == 0) { print ("I don't understand."); }
+		if (rand == 1) { print ("Try rephrasing that."); }
+		if (rand == 2) { print ("If I understood that, I would!"); }
+		if (rand == 3) { print ("Say what, now?"); }
+		if (rand == 4) { print ("Let's not, and say we did."); }
+		if (rand == 5) { print ("I'm not sure what you mean?\n\nThinking gives you wrinkles!", autowrap=False); }
+	}
+}
+
+/*
+	
+	Character movement stuff!
+	
+*/
+
+if (kbhit) {
+	if (player_standing) {
+		if (keypressed == "kp_5") {
+			sprite.stop("player");
+			player_direction = "stopped";
+		}
+		if ((keypressed == "left") or (keypressed == "kp_4")) {
+			if (player_direction != "west") {
+				sprite.x_velocity("player") = -1;
+				sprite.y_velocity("player") = 0;
+				sprite.view("player") = 1;
+				sprite.animate("player") = True;
+				player_direction = "west";
+			} else {
+				sprite.stop("player");
+				player_direction = "stopped";
+			}
+		}
+		if ((keypressed == "right") or (keypressed == "kp_6")) {
+			if (player_direction != "east") {
+				sprite.x_velocity("player") = 1;
+				sprite.y_velocity("player") = 0;
+				sprite.view("player") = 0;
+				sprite.animate("player") = True;
+				player_direction = "east";
+			} else {
+				sprite.stop("player");
+				player_direction = "stopped";
+			}
+		}
+		if ((keypressed == "down") or (keypressed == "kp_2")) {
+			if (player_direction != "south") {
+				sprite.x_velocity("player") = 0;
+				sprite.y_velocity("player") = 1;
+				sprite.view("player") = 2;
+				sprite.animate("player") = True;
+				player_direction = "south";
+			} else {
+				sprite.stop("player");
+				player_direction = "stopped";
+			}
+		}
+		if ((keypressed == "up") or (keypressed == "kp_8")) {
+			if (player_direction != "north") {
+				sprite.x_velocity("player") = 0;
+				sprite.y_velocity("player") = -1;
+				sprite.view("player") = 3;
+				sprite.animate("player") = True;
+				player_direction = "north";
+			} else {
+				sprite.stop("player");
+				player_direction = "stopped";
+			}
+		}
+		if (keypressed == "kp_7") {
+			if (player_direction != "northwest") {
+				sprite.x_velocity("player") = -1;
+				sprite.y_velocity("player") = -1;
+				sprite.view("player") = 1;
+				sprite.animate("player") = True;
+				player_direction = "northwest";
+			} else {
+				sprite.stop("player");
+				player_direction = "stopped";
+			}
+		}
+		if (keypressed == "kp_1") {
+			if (player_direction != "southwest") {
+				sprite.x_velocity("player") = -1;
+				sprite.y_velocity("player") = 1;
+				sprite.view("player") = 1;
+				sprite.animate("player") = True;
+				player_direction = "southwest";
+			} else {
+				sprite.stop("player");
+				player_direction = "stopped";
+			}
+		}
+		if (keypressed == "kp_9") {
+			if (player_direction != "northeast") {
+				sprite.x_velocity("player") = 1;
+				sprite.y_velocity("player") = -1;
+				sprite.view("player") = 0;
+				sprite.animate("player") = True;
+				player_direction = "northeast";
+			} else {
+				sprite.stop("player");
+				player_direction = "stopped";
+			}
+		}
+		if (keypressed == "kp_3") {
+			if (player_direction != "southeast") {
+				sprite.x_velocity("player") = 1;
+				sprite.y_velocity("player") = 1;
+				sprite.view("player") = 0;
+				sprite.animate("player") = True;
+				player_direction = "southeast";
+			} else {
+				sprite.stop("player");
+				player_direction = "stopped";
+			}
+		}
+	}
+	
+	include ("menu shortcuts");
+}

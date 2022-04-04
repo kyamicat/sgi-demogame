@@ -1,0 +1,8 @@
+{
+	"sprite" : "apartment living room planter.png",
+	"frames" : [ [ [0,0,53,42] ] ],
+	"view": 0,
+	"frame": 0,
+	"baseline": -10,
+	"ms": 30
+}

@@ -1,0 +1,8 @@
+{
+	"sprite" : "title-quit.png",
+	"frames" : [ [ [0,0,80,29], [80,0,160,29] ] ],
+	"view": 0,
+	"frame": 0,
+	"baseline": 0,
+	"ms": 30
+}

@@ -1,0 +1,8 @@
+{
+	"sprite" : "apartment living room kitchenette.png",
+	"frames" : [ [ [0,0,30,47] ] ],
+	"view": 0,
+	"frame": 0,
+	"baseline": -25,
+	"ms": 30
+}

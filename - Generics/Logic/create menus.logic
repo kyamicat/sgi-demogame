@@ -1,0 +1,22 @@
+// Create the menu system. Only needs to be done once, at startup.
+
+menu.item.add ("File", "Save", "F5", True, "game.save();");
+menu.item.add ("File", "Restore", "F7", True, "game.load();");
+menu.item.add ("File", "-", "", False, "");
+menu.item.add ("File", "Restart", "F9", True, "game.restart();");
+menu.item.add ("File", "-", "", False, "");
+menu.item.add ("File", "Quit", "Alt-Q", True, "game.stop();");
+menu.item.add ("Action", "Inventory", "F4", True, "inventory.show();");
+menu.item.add ("Special", "Sound On/Off", "F2", True, "sound.enable();");
+menu.item.add ("Special", "Hints On/Off", "Alt-H", True, "input.hint.toggle();");
+menu.item.add ("Special", "Pause Game", "Pause", True, "game.pause();");
+menu.item.add ("Special", "-", "", False, "");
+menu.item.add ("Special", "Magnify", "Keypad +", True, "window.magnification = window.magnification+1;");
+menu.item.add ("Special", "Contract", "Keypad -", True, "window.magnification = window.magnification-1;");
+menu.item.add ("Special", "Full screen", "Alt-Ù", True, "window.fullscreen();");
+menu.item.add ("Speed", "Normal", "", True, "game.speed = 50;");
+menu.item.add ("Speed", "Slow", "", True, "game.speed = 100;");
+menu.item.add ("Speed", "Fast", "", True, "game.speed = 10;");
+menu.item.add ("Speed", "Fastest", "", True, "game.speed = 0;");
+menu.item.add ("Speed", "-", "", False, "");
+menu.item.add ("Speed", "Slower", "", True, "game.speed = game.speed+10;");

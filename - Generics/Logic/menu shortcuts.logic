@@ -1,0 +1,100 @@
+/*
+
+	Keyboard Shortcuts
+	------------------
+	
+	Shortcuts are handled by the room script, they are not instantiated by
+	events. Simply put, you should include this script in each room that you
+	wish these shortcuts to work.
+	
+	You may want to encapsulate these shortcuts in further conditional
+	statements, such as disallowing F5 to save if the player is dead, etc.
+	
+*/
+	
+if (keypressed == "f2") {
+	sound.enable(); 	// Toggles sound on/off if no arguments set.
+}
+if (keypressed == "f4") {
+	inventory.show();	// Displays the player's inventory.
+}
+if (keypressed == "f5") {
+	game.save();		// Displays the game save dialog.
+}
+if (keypressed == "f7") {
+	game.load();		// Displays the game load dialog.
+}
+if (keypressed == "f9") {
+	game.restart();		// Prompts to restart the game. Resets to 0.logic on confirmation.
+}
+if (keypressed == "f12") {
+	window.save();		// Saves the current screen to disk, not including overlays.
+}
+if (keypressed == "alt-return") {
+	window.fullscreen();	// Toggles fullscreen mode.
+}
+if ((keypressed == "escape") or (keypressed == "f10")) {
+	/*
+		We need to disable and enable some menu items before
+		displaying the menu.
+		
+		If the game is fullscreen, then magnify and contract
+		should not be available.
+		
+		If the game is windowed, then magnify should only be
+		available if current magnification is less than 5, and
+		contract should only be available if current magnification
+		is larger than 1.
+		
+		The menu must be initialised before this routine runs,
+		otherwise you'll get runtime errors.
+	*/
+	
+	if (window.fullscreen == False) {
+		if (window.magnification < 5) {
+			menu.item.enable ("Special","Magnify") = True;
+		} else {
+			menu.item.enable ("Special","Magnify") = False;
+		}
+		if (window.magnification > 1) {
+			menu.item.enable ("Special","Contract") = True;
+		} else {
+			menu.item.enable ("Special","Contract") = False;
+		}
+	} else {
+		menu.item.enable ("Special","Magnify") = False;
+		menu.item.enable ("Special","Contract") = False;
+	}
+	
+	// Now that we've disabled and enabled the appropriate items, display the menu:
+	menu.show();
+}
+
+if (keypressed == "tab") {
+		input.autofill();		// This auto-completes the first hinted word. (Hints must be on)
+}
+if (keypressed == "kp_plus") {
+	if (window.fullscreen == False) {
+		if (window.magnification < 5) {
+			// Only executes if the game is windowed, and the magnification is smaller than 5.
+			window.magnification = window.magnification+1;
+		}
+	}
+}
+if (keypressed == "kp_minus") {
+	if (window.fullscreen == False) {
+		if (window.magnification > 1) {
+			// Only executes if the game is windowed, and the magnification is larger than 1.
+			window.magnification = window.magnification-1;
+		}
+	}
+}
+if (keypressed == "alt-q") {
+	game.stop();				// Brings up the quit game dialog box.
+}
+if (keypressed == "pause") {
+	game.pause();				// Displays a game paused message. Language set by setlang().
+}
+if (keypressed == "alt-h") {
+	input.hint.toggle();		// Toggles the hint system on and off.
+}
